@@ -21,20 +21,14 @@ void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
 }
 
 void KalmanFilter::Predict() {
-  /**
-  TODO:
-    * predict the state
-  */
+  //predict the state using constant velocity model (linear)
 	x_ = F_ * x_;
 	MatrixXd Ft = F_.transpose();
 	P_ = F_ * P_ * Ft + Q_;
 }
 
 void KalmanFilter::Update(const VectorXd &z) {
-  /**
-  TODO:
-    * update the state by using Kalman Filter equations
-  */
+  // update the state by using Kalman Filter equations (laser, linear measurement)
 	VectorXd z_pred = H_ * x_;
 	VectorXd y = z - z_pred;
 	MatrixXd Ht = H_.transpose();
@@ -51,13 +45,23 @@ void KalmanFilter::Update(const VectorXd &z) {
 }
 
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
-  /**
-  TODO:
-    * update the state by using Extended Kalman Filter equations
-  */
-  // TODO: place holder here, will change to EKF later
-	VectorXd z_pred = H_ * x_;
+  // update the state by using Extended Kalman Filter equations (nonlinear, radar measurement)
+  // apply nonlinear measurement on the states
+  double rho, theta, rhod;
+  rho = sqrt(x_(0)*x_(0) + x_(1)*x_(1));
+  // return if rho is zero (numerical zero)
+  if (rho <= 1e-4)
+    return;
+  theta = atan2(x_(1), x_(0));
+  rhod = (x_(2)*x_(0)+x_(3)*x_(1))/rho; 
+	VectorXd z_pred(3);
+  z_pred << rho, theta, rhod;
 	VectorXd y = z - z_pred;
+  // normalize y(1) to (-pi, pi)
+  while (y(1)<-M_PI)
+    y(1) += 2*M_PI;
+  while (y(1)>M_PI)
+    y(1) -= 2*M_PI;
 	MatrixXd Ht = H_.transpose();
 	MatrixXd S = H_ * P_ * Ht + R_;
 	MatrixXd Si = S.inverse();
